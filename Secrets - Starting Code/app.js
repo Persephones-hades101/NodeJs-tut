@@ -6,7 +6,8 @@ const app = express();
 const bodyParser = require('body-parser');
 const ejs = require('ejs');
 const mongoose = require('mongoose');
-const md5=require('md5')
+const bcrypt = require('bcrypt');
+const saltRound = 10;
 // making connections to mongodb database
 mongoose.connect("mongodb://127.0.0.1:27017/userDB");
 
@@ -20,7 +21,7 @@ app.set("view engine", 'ejs');
 
 // user schema and User Model
 
-const userSchema =new mongoose.Schema({
+const userSchema = new mongoose.Schema({
   email: String,
   password: String
 })
@@ -46,18 +47,23 @@ app.get("/register", (req, res) => {
 
 // Registering user in the users collection
 app.post("/register", (req, res) => {
-  const user = new User({
-    email: req.body.username,
-    password: md5(req.body.password)
+
+  bcrypt.hash(req.body.password, saltRound, (err, hash) => {
+    const user = new User({
+      email: req.body.username,
+      password: hash
+    })
+
+    user.save()
+      .then((result) => {
+        res.render("secrets");
+      })
+      .catch((err) => {
+        console.log(err);
+      })
   })
 
-  user.save()
-    .then((result) => {
-      res.render("secrets");
-    })
-    .catch((err) => {
-      console.log(err);
-    })
+
 })
 
 // searching user in the collection to handle the /login route
@@ -66,21 +72,22 @@ app.post("/login", (req, res) => {
   const password = req.body.password
   User.findOne({ email: username })
     .then((foundUser) => {
-      if(foundUser)
-      {
-        if (foundUser.password === md5(password))  {
-          res.render("secrets");
-        }
-        else{
-          console.log("Wrong Password");
-          res.redirect("/login");
-        }
+      if (foundUser) {
+        bcrypt.compare(password, foundUser.password, (err, result) => {
+          if (result === true) {
+            res.render("secrets");
+          }
+          else {
+            console.log("Wrong Password");
+            res.redirect("/login");
+          }
+        })
       }
-      else{
+      else {
         console.log("Wrong User");
         res.redirect("/login");
       }
-      
+
     })
     .catch((err) => {
       console.log(err);
