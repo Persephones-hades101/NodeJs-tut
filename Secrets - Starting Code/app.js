@@ -5,7 +5,7 @@ const app = express();
 const bodyParser = require('body-parser');
 const ejs = require('ejs');
 const mongoose = require('mongoose')
-
+const encrypt=require('mongoose-encryption');
 // making connections to mongodb database
 mongoose.connect("mongodb://127.0.0.1:27017/userDB");
 
@@ -23,6 +23,10 @@ const userSchema =new mongoose.Schema({
   email: String,
   password: String
 })
+
+const secret="thisisourlittlesecret";
+userSchema.plugin(encrypt,{secret:secret,encryptedFields:['password']});
+
 
 const User = mongoose.model("User", userSchema);
 
